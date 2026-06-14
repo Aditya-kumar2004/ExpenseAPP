@@ -1,0 +1,134 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(uuid())
+  name         String
+  email        String       @unique
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  memberships  Membership[]
+  expensesPaid Expense[]
+  splitsOwed   ExpenseSplit[]
+  settlements  Settlement[] @relation("from")
+  received     Settlement[] @relation("to")
+}
+
+model Group {
+  id          String          @id @default(uuid())
+  name        String
+  currency    String          @default("INR")
+  createdAt   DateTime        @default(now())
+  memberships Membership[]
+  expenses    Expense[]
+  settlements Settlement[]
+  imports     ImportSession[]
+}
+
+model Membership {
+  id       String    @id @default(uuid())
+  userId   String
+  groupId  String
+  joinedAt DateTime
+  leftAt   DateTime?
+  user     User      @relation(fields: [userId], references: [id])
+  group    Group     @relation(fields: [groupId], references: [id])
+}
+
+model Expense {
+  id                    String         @id @default(uuid())
+  groupId               String
+  description           String
+  amount                Float
+  currency              String         @default("INR")
+  amountInGroupCurrency Float
+  exchangeRate          Float          @default(1)
+  date                  DateTime
+  paidById              String
+  splitType             SplitType
+  createdAt             DateTime       @default(now())
+  isDeleted             Boolean        @default(false)
+  originalRowIndex      Int?
+  group                 Group          @relation(fields: [groupId], references: [id])
+  paidBy                User           @relation(fields: [paidById], references: [id])
+  splits                ExpenseSplit[]
+}
+
+model ExpenseSplit {
+  id         String   @id @default(uuid())
+  expenseId  String
+  userId     String
+  amount     Float
+  percentage Float?
+  shares     Float?
+  expense    Expense  @relation(fields: [expenseId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model Settlement {
+  id         String   @id @default(uuid())
+  groupId    String
+  fromUserId String
+  toUserId   String
+  amount     Float
+  date       DateTime
+  note       String?
+  createdAt  DateTime @default(now())
+  group      Group    @relation(fields: [groupId], references: [id])
+  from       User     @relation("from", fields: [fromUserId], references: [id])
+  to         User     @relation("to", fields: [toUserId], references: [id])
+}
+
+model ImportSession {
+  id         String          @id @default(uuid())
+  groupId    String
+  uploadedBy String
+  filename   String
+  status     ImportStatus    @default(PENDING)
+  createdAt  DateTime        @default(now())
+  group      Group           @relation(fields: [groupId], references: [id])
+  anomalies  ImportAnomaly[]
+}
+
+model ImportAnomaly {
+  id              String        @id @default(uuid())
+  importSessionId String
+  rowIndex        Int
+  rowData         Json
+  anomalyType     String
+  description     String
+  userAction      String?
+  resolvedAt      DateTime?
+  session         ImportSession @relation(fields: [importSessionId], references: [id])
+}
+
+model ExchangeRateCache {
+  id           String   @id @default(uuid())
+  fromCurrency String
+  toCurrency   String
+  rate         Float
+  fetchedAt    DateTime @default(now())
+}
+
+enum SplitType {
+  EQUAL
+  EXACT
+  PERCENTAGE
+  SHARES
+}
+
+enum ImportStatus {
+  PENDING
+  REVIEWING
+  COMPLETE
+}
