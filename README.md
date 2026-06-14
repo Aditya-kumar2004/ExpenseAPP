@@ -1,6 +1,6 @@
 # SPlit — Shared Expenses App
 
-A full-stack shared expenses application (SplitWise clone) built with the MERN-style stack using **Supabase** (PostgreSQL) as the database.
+A full-stack shared expenses application (a Splitwise clone) built with a modern React, Node.js, and Prisma stack, using Supabase (PostgreSQL) as the database.
 
 ## Tech Stack
 
